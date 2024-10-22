@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 contract CustomToken is ERC20 {
     constructor(string memory name, string memory symbol) ERC20(name, symbol) {
-        _mint(msg.sender, 1000000 * 10 ** 18);
+        _mint(msg.sender, 1000000 * 10 ** 18); // Mint 1 Million tokens
     }
 }
 
@@ -14,9 +14,10 @@ contract CustomDex {
     // Custom tokens initialized
     string[] public tokens = ["Tether USD", "BNB", "USD Coin", "stETH", "TRON", "Matic Token", "SHIBA INU", "Uniswap"];
 
+    // Map token name to token contract instance
     mapping(string => ERC20) public tokenInstanceMap;
 
-    uint256 ethValue = 1000000000000000000;
+    uint256 ethValue = 1000000000000000000; // 1 Ether = 10^18 Wei
 
     struct History {
         uint256 historyId;
@@ -29,6 +30,7 @@ contract CustomDex {
 
     uint256 public _historyIndex;
 
+    // Map historyId to History
     mapping(uint256 => History) private histories;
 
     constructor() {
@@ -39,18 +41,22 @@ contract CustomDex {
         }
     }
 
+    // Get balance of token deployed
     function getBalance(string memory tokenName) public view returns (uint256) {
         return tokenInstanceMap[tokenName].balanceOf(address(this));
     }
 
+    // Get total supply of token deployed
     function getTotalSupply(string memory tokenName) public view returns (uint256) {
         return tokenInstanceMap[tokenName].totalSupply();
     }
 
+    // Get name of token deployed
     function getName(string memory tokenName) public view returns (string memory) {
         return tokenInstanceMap[tokenName].name();
     }
 
+    // Get address of token deployed
     function getTokenAddress(string memory tokenName) public view returns (address) {
         return address(tokenInstanceMap[tokenName]);
     }
@@ -60,15 +66,16 @@ contract CustomDex {
         return address(this).balance;
     }
 
+    // Internal visibility allows to access on derived contracts but not on external contracts
     function _transactionHistory(
         string memory tokenName,
         string memory etherToken,
         uint256 inputValue,
         uint256 outputValue
     ) internal {
-        _historyIndex++;
-        uint256 historyId = _historyIndex;
-        History storage history = histories[historyId];
+        // _historyIndex++;
+        uint256 historyId = _historyIndex++;
+        History storage history = histories[historyId]; // Create instance of histories mapping
         history.historyId = historyId;
         history.userAddress = msg.sender;
         history.tokenA = tokenName;
@@ -77,19 +84,23 @@ contract CustomDex {
         history.outputValue = outputValue;
     }
 
+    // Eg: Swap 1000 Ether to 1000 Tether USD
     function swapEthToToken(string memory tokenName) public payable returns (uint256) {
         require(msg.value > 0, "Invalid amount");
         // require(tokenInstanceMap[tokenName] != ERC20(0), "Invalid token");
 
         uint256 inputValue = msg.value;
+        // For 1:1 conversion
         uint256 outputValue = (inputValue / ethValue) * 10 ** 18;
 
+        // Transfer output tokens from contract to user[msg.sender]
         require(tokenInstanceMap[tokenName].transfer(msg.sender, outputValue), "Transfer failed");
         string memory etherToken = "Ether";
         _transactionHistory(tokenName, etherToken, inputValue, outputValue);
         return outputValue;
     }
 
+    // Eg: Swap 1000 Tether USD to 1000 Ether
     function swapTokenToEth(string memory tokenName, uint256 amount) public returns (uint256) {
         require(amount > 0, "Invalid amount");
         require(tokenInstanceMap[tokenName].balanceOf(msg.sender) >= amount, "Insufficient balance");
